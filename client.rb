@@ -16,6 +16,70 @@ PASSWORD=ENV["PASSWORD"]
 
 ORG_NAME=ENV["ORG_NAME"]
 
+def get(access_token, url)
+  uri = URI.parse(url)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+  request = Net::HTTP::Get.new(uri.request_uri)
+
+  request.add_field("Authorization", "Bearer #{access_token}")
+  response = http.request(req)
+
+  return JSON.parse(response.body)
+end
+
+def post(access_token, url, json_obj)
+    uri = URI.parse(url)
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    request = Net::HTTP::Post.new(uri.request_uri)
+
+    request.add_field("Authorization", "Bearer #{access_token}")
+
+    if !json_obj.nil?
+      request.add_field('Content-Type', 'application/json')
+      request.body = json_obj
+    end
+
+    response = http.request(request)
+    return JSON.parse(response.body)
+end
+
+def patch(access_token, url, json_obj)
+  uri = URI.parse(url)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  request = Net::HTTP::Patch.new(uri.path)
+
+  request.add_field("Authorization", "Bearer #{access_token}")
+
+  if !json_obj.nil?
+    request.add_field('Content-Type', 'application/json')
+    request.body = json_obj
+  end
+
+  http.request(request)
+  return
+end
+
+def delete(access_token, url)
+  uri = URI.parse(url)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  request = Net::HTTP::Delete.new(uri.request_uri)
+
+  request.add_field("Authorization", "Bearer #{access_token}")
+
+  response = http.request(request)
+  return
+end
+
+
 # Authorizes against the Teem API. Required before any API actions.
 # Returns the Teem API JSON object containing the access token.
 def teem_authorize
@@ -81,101 +145,66 @@ def teem_authorize
 end
 
 def teem_get_users(access_token)
-  uri = URI.parse("https://app.teem.com/api/v4/accounts/users/")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  url = "https://app.teem.com/api/v4/accounts/users/"
 
-  req = Net::HTTP::Get.new(uri.request_uri)
-
-  req.add_field("Authorization", "Bearer #{access_token}")
-  res = http.request(req)
-
-  return JSON.parse(res.body)["users"]
+  response = get(access_token, url)
+  return response["users"]
 end
 
+
 def teem_create_user(access_token, organization_id, email, first_name, last_name)
-  uri = URI.parse("https://app.teem.com/api/v4/accounts/users/")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-  request = Net::HTTP::Post.new(uri.request_uri)
+  url = "https://app.teem.com/api/v4/accounts/users/"
 
-  request.add_field("Authorization", "Bearer #{access_token}")
+  json_obj = {'user' => {'organization_id' => organization_id, 'email' => "#{email}", 'first_name' => "#{first_name}", 'last_name' => "#{last_name}"}}.to_json
 
-  request.add_field('Content-Type', 'application/json')
-  request.body = {'user' => {'organization_id' => organization_id, 'email' => "#{email}", 'first_name' => "#{first_name}", 'last_name' => "#{last_name}"}}.to_json
-
-  response = http.request(request)
-
-  json = JSON.parse(response.body)["user"]
-
-  return json
+  response = post(access_token, url, json_obj)
+  return response["user"]
 end
 
 def teem_get_groups(access_token)
-  uri = URI.parse("https://app.teem.com/api/v4/accounts/groups/")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  url = "https://app.teem.com/api/v4/accounts/groups/"
 
-  req = Net::HTTP::Get.new(uri.request_uri)
-
-  req.add_field("Authorization", "Bearer #{access_token}")
-  res = http.request(req)
-
-  return JSON.parse(res.body)["groups"]
+  response = get(access_token, url)
+  return response["groups"]
 end
 
-def teem_get_user_info(access_token)
-  uri = URI.parse("https://app.teem.com/api/v4/accounts/users/me/")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
-  req = Net::HTTP::Get.new(uri.request_uri)
+def teem_get_API_user_info(access_token)
+  url = "https://app.teem.com/api/v4/accounts/users/me/"
 
-  req.add_field("Authorization", "Bearer #{access_token}")
-  res = http.request(req)
-
-  puts "response #{res.body}"
-
-  return JSON.parse(res.body)["user"]
+  response = get(access_token, url)
+  return response["user"]
 end
 
 def teem_create_group(access_token, organization_id, name, description)
-  uri = URI.parse("https://app.teem.com/api/v4/accounts/groups/")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-  request = Net::HTTP::Post.new(uri.request_uri)
+  url = "https://app.teem.com/api/v4/accounts/groups/"
 
-  request.add_field("Authorization", "Bearer #{access_token}")
+  json_obj = {'group' => {'organization_id' => organization_id, 'name' => "#{name}", 'description' => "#{description}"}}.to_json
 
-  request.add_field('Content-Type', 'application/json')
-  request.body = {'group' => {'organization_id' => organization_id, 'name' => "#{name}", 'description' => "#{description}"}}.to_json
-
-  response = http.request(request)
-
-  json = JSON.parse(response.body)["group"]
-
-  return json
+  response = post(access_token, url, json_obj)
+  return response["group"]
 end
 
-def teem_assign_group(access_token, group_ids)
-  uri = URI.parse("https://app.teem.com/api/v4/accounts/users/1023460/")
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-  request = Net::HTTP::Patch.new(uri.path)
+def teem_assign_group(access_token, group_ids, user_id)
+  url = "https://app.teem.com/api/v4/accounts/users/#{user_id}/"
 
-  request.add_field("Authorization", "Bearer #{access_token}")
+  json_obj = {'user' => {'group_ids' => group_ids}}.to_json
 
-  request.add_field('Content-Type', 'application/json')
-  request.body = {'user' => {'group_ids' => group_ids}}.to_json
+  patch(access_token, url, json_obj)
+  return
+end
 
-  response = http.request(request)
+def teem_delete_user(access_token, user_id)
+  url = "https://app.teem.com/api/v4/accounts/users/#{user_id}/"
 
+  delete(access_token, url)
+  return
+end
+
+def teem_delete_group(access_token, group_id)
+  url = "https://app.teem.com/api/v4/accounts/groups/#{group_id}/"
+
+  delete(access_token, url)
   return
 end
 
@@ -183,40 +212,49 @@ end
 #json = teem_authorize()
 #access_token = json["access_token"]
 #puts "access_token: #{access_token}"
-access_token = "pcad6GWLrLbpDLUtghuOcBIJ7PvlK2"
+access_token = "BdhPhzTY43RQ4YseTuZJwUeonO8tRP"
 
 
-users = teem_get_users(access_token)
+#users = teem_get_users(access_token)
 
- users.each do |user|
- puts user["email"]
-end
-
-organization_id = 13856
-email = "sldyer@ucdavis.edu"
-first_name = "Sande"
-last_name = "Dyer"
-
-created_user = teem_create_user(access_token, organization_id, email, first_name, last_name)
-puts created_user['email']
+ #users.each do |user|
+ #puts user["email"]
+#end
 
 
-name = "Young 102A"
-description = "Can book Young 102A"
+#organization_id = 13856
+#email = "cwjwong@ucdavis.edu"
+#first_name = "Jarold"
+#last_name = "Wong"
 
-created_group = teem_create_group(access_token, organization_id, name, description)
-puts created_group['name']
-
-
-groups = teem_get_groups(access_token)
-
- groups.each do |group|
- puts group["name"]
-end
+#created_user = teem_create_user(access_token, organization_id, email, first_name, last_name)
+#puts created_user['email']
 
 
-users = teem_get_user_info(access_token)
-puts users["email"]
+#organization_id = 13856
+#name = "Young 102A"
+#description = "Can book Young 102A"
 
-group_ids = [318304, 655258]
-teem_assign_group(access_token, group_ids)
+#created_group = teem_create_group(access_token, organization_id, name, description)
+#puts created_group['name']
+
+
+#groups = teem_get_groups(access_token)
+# groups.each do |group|
+# puts group["name"]
+#end
+
+
+#users = teem_get_API_user_info(access_token)
+#puts users["email"]
+
+
+#group_ids = [318304, 655258]
+#user_id = 1023460
+#group = teem_assign_group(access_token, group_ids, user_id)
+
+#user_id = 2146829
+#teem_delete_user(access_token, user_id)
+
+#group_id = 684123
+#teem_delete_group(access_token, group_id)
